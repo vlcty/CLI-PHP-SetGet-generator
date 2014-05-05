@@ -23,7 +23,7 @@ while ( <FILE> ) {
 		my $value = $2;
 
 		# set-Method
-		print("\n/*\n\tSet method for member variable $member\n*/\n");
+		print("\n/**\n\tSet method for member variable $member\n*/\n");
 
 		if ( $2 =~ m/^('|")/ ) {
 			printf("public function set%s (\$%s) {\n\t\$this->%s = utf8_encode(\$%s);\n}\n", toUppercase($member), $member, $member, $member);
@@ -33,7 +33,7 @@ while ( <FILE> ) {
 		}
 
 		# get-Method
-		print("\n/*\n\tGet method for member variable $member\n*/\n");
+		print("\n/**\n\tGet method for member variable $member\n*/\n");
 		printf("public function get%s () {\n\treturn \$this->%s;\n}\n", toUppercase($member), $member);
 
 		print("----------------------\n") if ($DEBUG);
