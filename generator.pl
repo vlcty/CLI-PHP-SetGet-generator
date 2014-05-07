@@ -25,16 +25,19 @@ while ( <FILE> ) {
 		# set-Method
 		print("\n/**\n\tSet method for member variable $member\n*/\n");
 
-		if ( $2 =~ m/^('|")/ ) {
-			printf("public function set%s (\$%s) {\n\t\$this->%s = utf8_encode(\$%s);\n}\n", toUppercase($member), $member, $member, $member);
+		if ( $2 =~ m/^'/ || $2 =~ m/^\"/ ) {
+			printf("public function set%s(\$%s) {\n\t\$this->%s = utf8_encode(\$%s);\n}\n", toUppercase($member), $member, $member, $member);
+		}
+		elsif ( $2 =~ m/null/ || $2 =~ m/NULL/ ) {
+			printf("public function set%s(&\$%s) {\n\t\$this->%s = \$%s;\n}\n", toUppercase($member), $member, $member, $member);
 		}
 		else {
-			printf("public function set%s (\$%s) {\n\t\$this->%s = \$%s;\n}\n", toUppercase($member), $member, $member, $member);
+			printf("public function set%s(\$%s) {\n\t\$this->%s = \$%s;\n}\n", toUppercase($member), $member, $member, $member);
 		}
 
 		# get-Method
 		print("\n/**\n\tGet method for member variable $member\n*/\n");
-		printf("public function get%s () {\n\treturn \$this->%s;\n}\n", toUppercase($member), $member);
+		printf("public function get%s() {\n\treturn \$this->%s;\n}\n", toUppercase($member), $member);
 
 		print("----------------------\n") if ($DEBUG);
 	}
