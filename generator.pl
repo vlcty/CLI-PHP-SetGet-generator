@@ -7,42 +7,141 @@ unless ( $ARGV[0] && -e $ARGV[0] ) {
 	die("Usage: $0 <path to file>\n");
 }
 
-my $DEBUG = 0;
+my $hasAnObject = 0;
 
 open(FILE, "<$ARGV[0]");
 while ( <FILE> ) {
 	my $line = $_;
 	chomp($line);
 
-	while ( $line =~ m/^\s+private \$(.*) = (.*);$/ig ) {
-
-		print("Group 1: $1\n") if ($DEBUG);
-		print("Group 2: $2\n") if ($DEBUG);
-
+	while ( $line =~ m/^\s+private \$(.*) = (.*);/ig ) {
 		my $member = $1;
 		my $value = $2;
 
 		# set-Method
-		print("\n/**\n\tSet method for member variable $member\n*/\n");
+		print("\n/**\n * Set method for member variable $member\n * \n * \@param ");
 
-		if ( $2 =~ m/^'/ || $2 =~ m/^\"/ ) {
-			printf("public function set%s(\$%s) {\n\t\$this->%s = utf8_encode(\$%s);\n}\n", toUppercase($member), $member, $member, $member);
+		my $temp = "";
+
+		if ( $2 =~ m/^('|\")/ ) {
+			printf("String \$%s \n", $member);
+			printf(" * \@throws InvalidArgumentException If the given value is not a string\n");
+			print(" **/\n");
+
+			# String representant
+			$temp = "public function set%s(\$%s)\n".
+					"{\n".
+					"\tif ( is_string(\$%s) ) {\n".
+					"\t\t\$this->%s = utf8_encode(\$%s);\n".
+					"\t}\n".
+					"\telse {\n".
+					"\t\tthrow new InvalidArgumentException(\"Not a string value!\");\n".
+					"\t}\n".
+					"}\n";
+
+			printf($temp,
+				toUppercase($member),
+				$member,
+				$member,
+				$member,
+				$member
+				);
 		}
-		elsif ( $2 =~ m/null/ || $2 =~ m/NULL/ ) {
-			printf("public function set%s(&\$%s) {\n\t\$this->%s = \$%s;\n}\n", toUppercase($member), $member, $member, $member);
+		elsif ( $2 =~ m/^(null|NULL)/ ) {
+			$hasAnObject = 1;
+
+			# Object representant
+			printf("Object \$%s \n", $member);
+			printf(" * \@throws InvalidArgumentException If the given value is not an object reference\n");
+			print(" **/\n");
+
+			$temp = "public function set%s(&\$%s)\n".
+					"{\n".
+					"\tif ( is_null(\$%s) == false && is_object(\$%s) && is_subclass_of(\$%s, \"<Fixme>\") ) {\n".
+					"\t\t\$this->%s = \$%s;\n".
+					"\t}\n".
+					"\telse {\n".
+					"\t\tthrow new InvalidArgumentException(\"Value was null, not an object or not an object of the wanted class!\");\n".
+					"\t}\n".
+					"}\n";
+
+			printf($temp,
+				toUppercase($member),
+				$member,
+				$member,
+				$member,
+				$member,
+				$member,
+				$member
+				);
+
+		}
+		elsif ( $2 =~ m/^(false|true)$/ ) {
+			# Boolean representations
+			printf("boolean \$%s \n", $member);
+			printf(" * \@throws InvalidArgumentException If the given value is not a boolean\n");
+			print(" **/\n");
+
+			$temp = "public function set%s(\$%s)\n".
+					"{\n".
+					"\tif ( is_bool(\$%s) ) {\n".
+					"\t\t\$this->%s = \$%s;\n".
+					"\t}\n".
+					"\telse {\n".
+					"\t\tthrow new InvalidArgumentException(\"Not a boolean value!\");\n".
+					"\t}\n".
+					"}\n";
+
+			printf($temp,
+				toUppercase($member),
+				$member,
+				$member,
+				$member,
+				$member
+				);
+		}
+		elsif ( $2 =~ m/^\d+$/ ) {
+			# Integer representation
+			printf("int \$%s \n", $member);
+			printf(" * \@throws InvalidArgumentException If the given value is not a integer\n");
+			print(" **/\n");
+
+			$temp = "public function set%s(\$%s)\n".
+					"{\n".
+					"\tif ( is_int(\$%s) ) {\n".
+					"\t\t\$this->%s = \$%s;\n".
+					"\t}\n".
+					"\telse {\n".
+					"\t\tthrow new InvalidArgumentException(\"Not a boolean value!\");\n".
+					"\t}\n".
+					"}\n";
+
+			printf($temp,
+				toUppercase($member),
+				$member,
+				$member,
+				$member,
+				$member
+				);
 		}
 		else {
+			printf("unknown \$%s \n **/\n", $member);
 			printf("public function set%s(\$%s) {\n\t\$this->%s = \$%s;\n}\n", toUppercase($member), $member, $member, $member);
 		}
 
 		# get-Method
-		print("\n/**\n\tGet method for member variable $member\n*/\n");
+		printf("\n/**\n * Get method for member variable $member\n *\n * \@return Value of %s\n **/\n", $member);
 		printf("public function get%s() {\n\treturn \$this->%s;\n}\n", toUppercase($member), $member);
-
-		print("----------------------\n") if ($DEBUG);
 	}
 }
 close(FILE);
+
+if ( $hasAnObject == 1 ) {
+	print("\n\n#######################\n");
+	print("# Warning:\n");
+	print("#\tWe had an object so replace <Fixme> in the set methods to the right class!\n");
+	print("#######################\n");
+}
 
 sub toUppercase {
 	my $l = shift;
