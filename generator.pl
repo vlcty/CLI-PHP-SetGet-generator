@@ -19,7 +19,11 @@ while ( <FILE> ) {
 		my $value = $2;
 
 		# set-Method
-		print("\n/**\n * Set method for member variable $member\n * \n * \@param ");
+		print("\n".
+			"/**\n".
+			" * Set method for member variable $member\n".
+			" * \n".
+			" * \@param ");
 
 		my $temp = "";
 
@@ -27,9 +31,8 @@ while ( <FILE> ) {
 			# String representant
 			printf("String \$%s \n", $member);
 			printf(" * \@throws InvalidArgumentException If the given value is not a string\n");
-			print(" **/\n");
+			printf(" **/\n");
 
-			# String representant
 			$temp = "public function set%s(\$%s)\n".
 					"{\n".
 					"\tif ( is_string(\$%s) ) {\n".
@@ -48,13 +51,13 @@ while ( <FILE> ) {
 				$member
 				);
 		}
-		elsif ( $2 =~ m/^(null|NULL)/ ) {
+		elsif ( $2 =~ m/^null$/i ) {
 			$hasAnObject = 1;
 
 			# Object representant
 			printf("Object \$%s \n", $member);
 			printf(" * \@throws InvalidArgumentException If the given value is not an object reference\n");
-			print(" **/\n");
+			printf(" **/\n");
 
 			$temp = "public function set%s(&\$%s)\n".
 					"{\n".
@@ -77,11 +80,11 @@ while ( <FILE> ) {
 				);
 
 		}
-		elsif ( $2 =~ m/^(false|true)$/ ) {
+		elsif ( $2 =~ m/^(false|true)$/i ) {
 			# Boolean representations
 			printf("boolean \$%s \n", $member);
 			printf(" * \@throws InvalidArgumentException If the given value is not a boolean\n");
-			print(" **/\n");
+			printf(" **/\n");
 
 			$temp = "public function set%s(\$%s)\n".
 					"{\n".
@@ -105,7 +108,7 @@ while ( <FILE> ) {
 			# Integer representation
 			printf("int \$%s \n", $member);
 			printf(" * \@throws InvalidArgumentException If the given value is not a integer\n");
-			print(" **/\n");
+			printf(" **/\n");
 
 			$temp = "public function set%s(\$%s)\n".
 					"{\n".
