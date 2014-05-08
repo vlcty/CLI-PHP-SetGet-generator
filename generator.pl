@@ -24,6 +24,7 @@ while ( <FILE> ) {
 		my $temp = "";
 
 		if ( $2 =~ m/^('|\")/ ) {
+			# String representant
 			printf("String \$%s \n", $member);
 			printf(" * \@throws InvalidArgumentException If the given value is not a string\n");
 			print(" **/\n");
@@ -32,7 +33,7 @@ while ( <FILE> ) {
 			$temp = "public function set%s(\$%s)\n".
 					"{\n".
 					"\tif ( is_string(\$%s) ) {\n".
-					"\t\t\$this->%s = utf8_encode(\$%s);\n".
+					"\t\t\$this->%s = trim(utf8_encode(\$%s));\n".
 					"\t}\n".
 					"\telse {\n".
 					"\t\tthrow new InvalidArgumentException(\"Not a string value!\");\n".
