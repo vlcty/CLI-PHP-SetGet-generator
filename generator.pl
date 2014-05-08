@@ -7,7 +7,7 @@ unless ( $ARGV[0] && -e $ARGV[0] ) {
 	die("Usage: $0 <path to file>\n");
 }
 
-my $hasAnObject = 0;
+my @functionsToFix = ();
 
 open(FILE, "<$ARGV[0]");
 while ( <FILE> ) {
@@ -52,8 +52,6 @@ while ( <FILE> ) {
 				);
 		}
 		elsif ( $2 =~ m/^null$/i ) {
-			$hasAnObject = 1;
-
 			# Object representant
 			printf("Object \$%s \n", $member);
 			printf(" * \@throws InvalidArgumentException If the given value is not an object reference\n");
@@ -79,6 +77,7 @@ while ( <FILE> ) {
 				$member
 				);
 
+			push(@functionsToFix, sprintf("public function set%s(&\$%s)", toUppercase($member), $member));
 		}
 		elsif ( $2 =~ m/^(false|true)$/i ) {
 			# Boolean representations
@@ -143,7 +142,10 @@ close(FILE);
 if ( $hasAnObject == 1 ) {
 	print("\n\n#######################\n");
 	print("# Warning:\n");
-	print("#\tWe had an object so replace <Fixme> in the set methods to the right class!\n");
+	print("#\tWe had one or more object so replace <Fixme> with a class name in the follogwing set methods:\n");
+	foreach my $currentFunction ( @functionsToFix ) {
+		printf("#\t\t- %s\n", $currentFunction);
+	}
 	print("#######################\n");
 }
 
