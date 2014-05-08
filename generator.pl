@@ -128,8 +128,28 @@ while ( <FILE> ) {
 				);
 		}
 		else {
-			printf("unknown \$%s \n **/\n", $member);
-			printf("public function set%s(\$%s) {\n\t\$this->%s = \$%s;\n}\n", toUppercase($member), $member, $member, $member);
+			# Floating point representant
+			printf("float \$%s \n", $member);
+			printf(" * \@throws InvalidArgumentException If the given value is not a float\n");
+			printf(" **/\n");
+
+			$temp = "public function set%s(\$%s)\n".
+					"{\n".
+					"\tif ( is_float(\$%s) ) {\n".
+					"\t\t\$this->%s = \$%s;\n".
+					"\t}\n".
+					"\telse {\n".
+					"\t\tthrow new InvalidArgumentException(\"Not a float value!\");\n".
+					"\t}\n".
+					"}\n";
+
+			printf($temp,
+				toUppercase($member),
+				$member,
+				$member,
+				$member,
+				$member
+				);
 		}
 
 		# get-Method
@@ -139,12 +159,12 @@ while ( <FILE> ) {
 }
 close(FILE);
 
-if ( $hasAnObject == 1 ) {
+if ( scalar( @functionsToFix ) > 0 ) {
 	print("\n\n#######################\n");
 	print("# Warning:\n");
 	print("#\tWe had one or more object so replace <Fixme> with a class name in the follogwing set methods:\n");
 	foreach my $currentFunction ( @functionsToFix ) {
-		printf("#\t\t- %s\n", $currentFunction);
+		printf("#\t- %s\n", $currentFunction);
 	}
 	print("#######################\n");
 }
