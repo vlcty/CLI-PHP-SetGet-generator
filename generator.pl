@@ -59,7 +59,7 @@ while ( <FILE> ) {
 
 			$temp = "public function set%s(&\$%s)\n".
 					"{\n".
-					"\tif ( is_null(\$%s) == false && is_object(\$%s) && is_subclass_of(\$%s, \"<Fixme>\") ) {\n".
+					"\tif ( is_null(\$%s) == false && is_object(\$%s) && \$%s instanceof <Fixme> ) {\n".
 					"\t\t\$this->%s = \$%s;\n".
 					"\t}\n".
 					"\telse {\n".
