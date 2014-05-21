@@ -115,7 +115,7 @@ while ( <FILE> ) {
 					"\t\t\$this->%s = \$%s;\n".
 					"\t}\n".
 					"\telse {\n".
-					"\t\tthrow new InvalidArgumentException(\"Not a boolean value!\");\n".
+					"\t\tthrow new InvalidArgumentException(\"Not a int value!\");\n".
 					"\t}\n".
 					"}\n";
 
