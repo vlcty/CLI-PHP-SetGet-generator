@@ -59,7 +59,7 @@ while ( <FILE> ) {
 
 			$temp = "public function set%s(&\$%s)\n".
 					"{\n".
-					"\tif ( is_null(\$%s) == false && is_object(\$%s) && \$%s instanceof <Fixme> ) {\n".
+					"\tif ( \$%s instanceof Fixme ) {\n".
 					"\t\t\$this->%s = \$%s;\n".
 					"\t}\n".
 					"\telse {\n".
@@ -69,8 +69,6 @@ while ( <FILE> ) {
 
 			printf($temp,
 				toUppercase($member),
-				$member,
-				$member,
 				$member,
 				$member,
 				$member,
