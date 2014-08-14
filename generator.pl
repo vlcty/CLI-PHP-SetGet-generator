@@ -2,8 +2,6 @@
 use strict;
 use warnings;
 use Getopt::Long;
-use Term::ANSIColor;
-
 # Config
 our $sourcefile = '';
 our $phpdoc = 0;
@@ -27,7 +25,7 @@ sub parseOptions {
 		"help" => \&printHelp
 	);
 
-	die(colored("Sourcefile not found or not given. Use the --sourcefile option\n",'red')) if ( ! -e $sourcefile );
+	die("Sourcefile not found or not given. Use the --sourcefile option\n") if ( ! -e $sourcefile );
 }
 
 sub printHelp {
@@ -128,7 +126,7 @@ sub makeStringMethod {
 	my $format = <<EOS;
 %s function set%s(%s) {
 	if ( is_string(%s) ) {
-		\$this->%s = trim(utf8_encode(\$%s));
+		\$this->%s = utf8_encode(\$%s);
 	}
 	else {
 		throw new InvalidArgumentException("Not a string value");
@@ -161,7 +159,7 @@ sub makeIntegerMethod {
 	my $format = <<EOS;
 %s function set%s(\$%s) {
 	if ( is_int(\$%s) ) {
-		\$this->%s = %s;
+		\$this->%s = \$%s;
 	}
 	else {
 		throw new InvalidArgumentException("Not an integer value");
