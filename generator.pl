@@ -99,6 +99,12 @@ sub parseFile {
 				print("\n");
 				print(makeGetterPHPDoc($member, 'int')) if ( $phpdoc );
 			}
+			elsif ( $value =~ m/^array/ ) {
+				print(makeArrayPHPDoc($member)) if  ( $phpdoc );
+				print(makeArrayMethod($modifier, $member));
+				print("\n");
+				print(makeGetterPHPDoc($member, 'array')) if ( $phpdoc );
+			}
 			else {
 				print(makeFloatPHPDoc($member)) if ( $phpdoc );
 				print(makeFloatMethod($modifier, $member));
@@ -275,6 +281,39 @@ sub makeFloatPHPDoc {
  * 
  * \@param float \$$member 
  * \@throws InvalidArgumentException If the given value is no a float value
+ **/
+EOS
+}
+
+##
+## Array stuff
+##
+sub makeArrayMethod {
+	my ( $modifier, $name ) = @_;
+
+	my $format = <<EOS;
+%s function set%s(\$%s) {
+	if ( is_array(\$%s) ) {
+		\$this->%s = \$%s;
+	}
+	else {
+		throw new InvalidArgumentException("Not an array");
+	}
+}
+EOS
+
+	return fillInTheVariables($format, $modifier, $name);
+}
+
+sub makeArrayPHPDoc {
+	my ( $member ) = @_;
+
+	return <<EOS
+/**
+ * Sets the value for $member
+ * 
+ * \@param array \$$member 
+ * \@throws InvalidArgumentException If the given value is no an array
  **/
 EOS
 }
