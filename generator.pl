@@ -1,175 +1,342 @@
 #!/usr/bin/perl
-
 use strict;
 use warnings;
+use Getopt::Long;
+use Term::ANSIColor;
 
-unless ( $ARGV[0] && -e $ARGV[0] ) {
-	die("Usage: $0 <path to file>\n");
+# Config
+our $sourcefile = '';
+our $phpdoc = 0;
+our @functionsToFix;
+our $version = "1.0";
+
+main();
+
+sub main {
+	parseOptions();
+	parseFile();
+
+	warnAboutObjects();
 }
 
-my @functionsToFix = ();
+sub parseOptions {
+	GetOptions
+	(
+		"sourcefile=s" => \$sourcefile,
+		"phpdoc" => \$phpdoc,
+		"help" => \&printHelp
+	);
 
-open(FILE, "<$ARGV[0]");
-while ( <FILE> ) {
-	my $line = $_;
-	chomp($line);
-
-	while ( $line =~ m/^\s+private \$(.*) = (.*);/ig ) {
-		my $member = $1;
-		my $value = $2;
-
-		# set-Method
-		print("\n".
-			"/**\n".
-			" * Set method for member variable $member\n".
-			" * \n".
-			" * \@param ");
-
-		my $temp = "";
-
-		if ( $2 =~ m/^('|\")/ ) {
-			# String representant
-			printf("String \$%s \n", $member);
-			printf(" * \@throws InvalidArgumentException If the given value is not a string\n");
-			printf(" **/\n");
-
-			$temp = "public function set%s(\$%s)\n".
-					"{\n".
-					"\tif ( is_string(\$%s) ) {\n".
-					"\t\t\$this->%s = trim(utf8_encode(\$%s));\n".
-					"\t}\n".
-					"\telse {\n".
-					"\t\tthrow new InvalidArgumentException(\"Not a string value!\");\n".
-					"\t}\n".
-					"}\n";
-
-			printf($temp,
-				toUppercase($member),
-				$member,
-				$member,
-				$member,
-				$member
-				);
-		}
-		elsif ( $2 =~ m/^null$/i ) {
-			# Object representant
-			printf("Object \$%s \n", $member);
-			printf(" * \@throws InvalidArgumentException If the given value is not an object reference\n");
-			printf(" **/\n");
-
-			$temp = "public function set%s(&\$%s)\n".
-					"{\n".
-					"\tif ( \$%s instanceof Fixme ) {\n".
-					"\t\t\$this->%s = \$%s;\n".
-					"\t}\n".
-					"\telse {\n".
-					"\t\tthrow new InvalidArgumentException(\"Value was null, not an object or not an object of the wanted class!\");\n".
-					"\t}\n".
-					"}\n";
-
-			printf($temp,
-				toUppercase($member),
-				$member,
-				$member,
-				$member,
-				$member
-				);
-
-			push(@functionsToFix, sprintf("public function set%s(&\$%s)", toUppercase($member), $member));
-		}
-		elsif ( $2 =~ m/^(false|true)$/i ) {
-			# Boolean representations
-			printf("boolean \$%s \n", $member);
-			printf(" * \@throws InvalidArgumentException If the given value is not a boolean\n");
-			printf(" **/\n");
-
-			$temp = "public function set%s(\$%s)\n".
-					"{\n".
-					"\tif ( is_bool(\$%s) ) {\n".
-					"\t\t\$this->%s = \$%s;\n".
-					"\t}\n".
-					"\telse {\n".
-					"\t\tthrow new InvalidArgumentException(\"Not a boolean value!\");\n".
-					"\t}\n".
-					"}\n";
-
-			printf($temp,
-				toUppercase($member),
-				$member,
-				$member,
-				$member,
-				$member
-				);
-		}
-		elsif ( $2 =~ m/^\d+$/ ) {
-			# Integer representation
-			printf("int \$%s \n", $member);
-			printf(" * \@throws InvalidArgumentException If the given value is not a integer\n");
-			printf(" **/\n");
-
-			$temp = "public function set%s(\$%s)\n".
-					"{\n".
-					"\tif ( is_int(\$%s) ) {\n".
-					"\t\t\$this->%s = \$%s;\n".
-					"\t}\n".
-					"\telse {\n".
-					"\t\tthrow new InvalidArgumentException(\"Not a int value!\");\n".
-					"\t}\n".
-					"}\n";
-
-			printf($temp,
-				toUppercase($member),
-				$member,
-				$member,
-				$member,
-				$member
-				);
-		}
-		else {
-			# Floating point representant
-			printf("float \$%s \n", $member);
-			printf(" * \@throws InvalidArgumentException If the given value is not a float\n");
-			printf(" **/\n");
-
-			$temp = "public function set%s(\$%s)\n".
-					"{\n".
-					"\tif ( is_float(\$%s) ) {\n".
-					"\t\t\$this->%s = \$%s;\n".
-					"\t}\n".
-					"\telse {\n".
-					"\t\tthrow new InvalidArgumentException(\"Not a float value!\");\n".
-					"\t}\n".
-					"}\n";
-
-			printf($temp,
-				toUppercase($member),
-				$member,
-				$member,
-				$member,
-				$member
-				);
-		}
-
-		# get-Method
-		printf("\n/**\n * Get method for member variable $member\n *\n * \@return Value of %s\n **/\n", $member);
-		printf("public function get%s() {\n\treturn \$this->%s;\n}\n", toUppercase($member), $member);
-	}
+	die(colored("Sourcefile not found or not given. Use the --sourcefile option\n",'red')) if ( ! -e $sourcefile );
 }
-close(FILE);
 
-if ( scalar( @functionsToFix ) > 0 ) {
-	print("\n\n#######################\n");
-	print("# Warning:\n");
-	print("#\tWe had one or more object so replace <Fixme> with a class name in the follogwing set methods:\n");
-	foreach my $currentFunction ( @functionsToFix ) {
-		printf("#\t- %s\n", $currentFunction);
-	}
-	print("#######################\n");
+sub printHelp {
+	print <<EOS;
+PHP SetGet generator - A CLI tool to generate setter and getter methods
+			based on existing members and their data types
+
+Copyright (C) 2014  Josef 'veloc1ty' Stautner ( hello\@veloc1ty.de)
+
+This program is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation version 3 of the License.
+
+You should have received a copy of the GNU General Public License
+along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+Application version: $version
+
+Command line options:
+required:
+	--sourcefile => Path to the php class file
+
+optional:
+	--phpdoc => Generate basic PHPDoc documentation
+	--help => Print this screen
+EOS
+
+	exit 0;
 }
 
 sub toUppercase {
 	my $l = shift;
 	$l =~ s/\b(\w)/\U$1/g;
 	return $l;
-	#return join '', map { ucfirst lc } split /(\s+)/, $_[0];
+}
+
+sub parseFile {
+	open(SOURCEFILE, "<$sourcefile");
+	while ( <SOURCEFILE> ) {
+		my $line = $_;
+		chomp($line);
+
+		if ( $line =~ m/^\s+(private|protected) \$(.*) = (.*);/ig ) {
+			my $modifier = $1;
+			my $member = $2;
+			my $value = $3;
+
+			if ( $value =~ m/('|")/ ) {
+				print(makeStringPHPDoc($member)) if ( $phpdoc );
+				print(makeStringMethod($modifier, $member));
+				print("\n");
+				print(makeGetterPHPDoc($member, 'string')) if ( $phpdoc );
+			}
+			elsif ( $value =~ m/^null/ ) {
+				print(makeObjectPHPDoc($member)) if ( $phpdoc );
+				print(makeObjectMethod($modifier, $member));
+				print("\n");
+				print(makeGetterPHPDoc($member, 'object')) if ( $phpdoc );
+			}
+			elsif ( $value =~ m/(false|true)/ ) {
+				print(makeBoolPHPDoc($member)) if ( $phpdoc );
+				print(makeBoolMethod($modifier, $member));
+				print("\n");
+				print(makeGetterPHPDoc($member, 'bool')) if ( $phpdoc );
+			}
+			elsif ( $value =~ m/^\d+$/ ) {
+				print(makeIntegerPHPDoc($member)) if ( $phpdoc );
+				print(makeIntegerMethod($modifier, $member));
+				print("\n");
+				print(makeGetterPHPDoc($member, 'int')) if ( $phpdoc );
+			}
+			else {
+				print(makeFloatPHPDoc($member)) if ( $phpdoc );
+				print(makeFloatMethod($modifier, $member));
+				print("\n");
+				print(makeGetterPHPDoc($member, 'float')) if ( $phpdoc );
+			}
+
+			print(makeGetterMethod($modifier, $member));
+			print("\n");
+		}
+	}
+	close(SOURCEFILE);
+}
+
+##
+## String stuff
+##
+sub makeStringMethod {
+	my ( $modifier, $name ) = @_;
+
+	my $format = <<EOS;
+%s function set%s(%s) {
+	if ( is_string(%s) ) {
+		\$this->%s = trim(utf8_encode(\$%s));
+	}
+	else {
+		throw new InvalidArgumentException("Not a string value");
+	}
+}
+EOS
+
+	return fillInTheVariables($format, $modifier, $name);
+}
+
+sub makeStringPHPDoc {
+	my ( $member ) = @_;
+
+	return <<EOS;
+/**
+ * Sets the value for $member
+ * 
+ * \@param String \$$member 
+ * \@throws InvalidArgumentException If the given value is no a string value
+ **/
+EOS
+}
+
+##
+## Integer stuff
+##
+sub makeIntegerMethod {
+	my ( $modifier, $name ) = @_;
+
+	my $format = <<EOS;
+%s function set%s(\$%s) {
+	if ( is_int(\$%s) ) {
+		\$this->%s = %s;
+	}
+	else {
+		throw new InvalidArgumentException("Not an integer value");
+	}
+}
+EOS
+
+	return fillInTheVariables($format, $modifier, $name);
+}
+
+sub makeIntegerPHPDoc {
+	my ( $member ) = @_;
+
+	return <<EOS;
+/**
+ * Sets the value for $member
+ * 
+ * \@param int \$$member 
+ * \@throws InvalidArgumentException If the given value is no an integer value
+ **/
+EOS
+}
+
+##
+## Object stuff
+##
+sub makeObjectMethod {
+	my ( $modifier, $name ) = @_;
+
+	my $format = <<EOS;
+%s function set%s(&\$%s) {
+	if ( \$%s instanceof Fixme ) {
+		\$this->%s = \$%s;
+	}
+	else {
+		throw new InvalidArgumentException("Value was null, not an object or not an object of the wanted class!");
+	}
+}
+EOS
+
+	push(@functionsToFix, sprintf("%s function set%s(&\$%s)", $modifier, toUppercase($name), $name));
+
+	return fillInTheVariables($format, $modifier, $name);
+}
+
+sub makeObjectPHPDoc {
+	my ( $member ) = @_;
+
+	return <<EOS
+/**
+ * Sets the reference to an object for $member
+ * 
+ * \@param Object \$$member 
+ * \@throws InvalidArgumentException If the given reference if from the false object or null
+ **/
+EOS
+}
+
+##
+## Boolean stuff
+##
+sub makeBoolMethod {
+	my ( $modifier, $name ) = @_;
+
+	my $format = <<EOS;
+%s function set%s(\$%s) {
+	if ( is_bool(\$%s) ) {
+		\$this->%s = \$%s;
+	}
+	else {
+		throw new InvalidArgumentException("Not a boolean value");
+	}
+}
+EOS
+	return fillInTheVariables($format, $modifier, $name);
+}
+
+sub makeBoolPHPDoc {
+	my ( $member ) = @_;
+
+	return <<EOS
+/**
+ * Sets the value for $member
+ * 
+ * \@param bool \$$member 
+ * \@throws InvalidArgumentException If the given value is no a boolean value
+ **/
+EOS
+}
+
+##
+## Float stuff
+##
+sub makeFloatMethod {
+	my ( $modifier, $name ) = @_;
+
+	my $format = <<EOS;
+%s function set%s(\$%s) {
+	if ( is_float(\$%s) ) {
+		\$this->%s = \$%s;
+	}
+	else {
+		throw new InvalidArgumentException("Not a float value");
+	}
+}
+EOS
+
+	return fillInTheVariables($format, $modifier, $name);
+}
+
+sub makeFloatPHPDoc {
+	my ( $member ) = @_;
+
+	return <<EOS
+/**
+ * Sets the value for $member
+ * 
+ * \@param float \$$member 
+ * \@throws InvalidArgumentException If the given value is no a float value
+ **/
+EOS
+}
+
+##
+## Getter stuff
+##
+sub makeGetterMethod {
+	my ( $modifier, $name ) = @_;
+
+	my $format = <<EOS;
+%s function get%s() {
+	return \$this->%s;
+}
+EOS
+
+	return sprintf($format,
+		$modifier,
+		toUppercase($name),
+		$name
+		);
+}
+
+sub makeGetterPHPDoc {
+	my ( $member, $datatype ) = @_;
+	my $message = ( $datatype eq 'object' ) ? 'The reference' : 'The value';
+
+	return <<EOS;
+/**
+ * Get the value for $member
+ * 
+ * \@return $datatype $message
+ **/
+EOS
+}
+
+sub fillInTheVariables {
+	my ( $format, $modifier, $name ) = @_;
+
+	return sprintf($format,
+		$modifier,
+		toUppercase($name),
+		$name,
+		$name,
+		$name,
+		$name
+		);
+}
+
+sub warnAboutObjects {
+	my $amountOfWarnings = scalar(@functionsToFix);
+	my $message = '';
+
+	if ( $amountOfWarnings == 0 ) {
+		$message .= sprintf("\n\nWarning: We had a object-setter function. Please replace 'Fixme' in this function: %s\n", $functionsToFix[0]);
+	}
+	elsif ( $amountOfWarnings > 1 ) {
+		$message .= sprintf("\n\nWarning: We had %d object setter functions. Replace 'Fixme' in the following functions with an existing class name:\n", $amountOfWarnings);
+		foreach my $currentFunction ( @functionsToFix ) {
+			$message .= sprintf("- %s\n", $currentFunction);
+		}
+	}
+
+	print(colored($message,'red'));
 }
