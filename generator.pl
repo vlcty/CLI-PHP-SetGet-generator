@@ -2,6 +2,8 @@
 use strict;
 use warnings;
 use Getopt::Long;
+use Term::ANSIColor;
+
 # Config
 our $sourcefile = '';
 our $phpdoc = 0;
