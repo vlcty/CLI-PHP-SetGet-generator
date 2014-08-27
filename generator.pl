@@ -126,8 +126,8 @@ sub makeStringMethod {
 	my ( $modifier, $name ) = @_;
 
 	my $format = <<EOS;
-%s function set%s(%s) {
-	if ( is_string(%s) ) {
+%s function set%s(\$%s) {
+	if ( is_string(\$%s) ) {
 		\$this->%s = utf8_encode(\$%s);
 	}
 	else {
@@ -367,7 +367,7 @@ sub warnAboutObjects {
 	my $amountOfWarnings = scalar(@functionsToFix);
 	my $message = '';
 
-	if ( $amountOfWarnings == 0 ) {
+	if ( $amountOfWarnings == 1 ) {
 		$message .= sprintf("\n\nWarning: We had a object-setter function. Please replace 'Fixme' in this function: %s\n", $functionsToFix[0]);
 	}
 	elsif ( $amountOfWarnings > 1 ) {
