@@ -75,6 +75,8 @@ sub parseFile {
 			my $member = $2;
 			my $value = $3;
 
+			$modifier = 'public' if ( $modifier eq 'private' );
+
 			if ( $value =~ m/('|")/ ) {
 				print(makeStringPHPDoc($member)) if ( $phpdoc );
 				print(makeStringMethod($modifier, $member));
@@ -323,6 +325,8 @@ EOS
 ##
 sub makeGetterMethod {
 	my ( $modifier, $name ) = @_;
+
+	$modifier = "public" if ( $modifier eq "private" );
 
 	my $format = <<EOS;
 %s function get%s() {
